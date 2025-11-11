@@ -16,18 +16,20 @@ namespace Simple_Backup
     private List<string> _directoriesToCreate = new List<string>();
         private long _totalBytes = 0;
         private long _copiedBytes = 0;
-        private bool _isOperationComplete = false;
-        private bool _wasCancelledMidOperation = false;
+      private bool _isOperationComplete = false;
+      private bool _wasCancelledMidOperation = false;
     private ConflictResolutionDialog.ConflictResolution _conflictResolution = ConflictResolutionDialog.ConflictResolution.None;
+    private bool _shouldEjectDriveAfterBackup = false;
 
-        public BackupProgressDialog(string sourceDirectory, string destinationDirectory)
-        {
+    public BackupProgressDialog(string sourceDirectory, string destinationDirectory, bool shouldEjectDrive = false)
+     {
    InitializeComponent();
        _sourceDirectory = sourceDirectory;
-            _destinationDirectory = destinationDirectory;
-      
-            // Ensure button states are correct at startup
-         CancelButton.IsEnabled = true;
+ _destinationDirectory = destinationDirectory;
+     _shouldEjectDriveAfterBackup = shouldEjectDrive;
+    
+  // Ensure button states are correct at startup
+    CancelButton.IsEnabled = true;
    CloseButton.IsEnabled = false;
      }
 
@@ -57,8 +59,20 @@ namespace Simple_Backup
        else
         {
           OverallStatusText.Text = "Status: Backup completed successfully!";
+      
+       // Eject drive if requested and backup was successful
+if (_shouldEjectDriveAfterBackup)
+    {
+  System.Diagnostics.Debug.WriteLine("Attempting to eject drive...");
+     
+   // Show eject dialog with retry logic
+   var ejectDialog = new EjectDialog(_destinationDirectory);
+      ejectDialog.Owner = this;
+    ejectDialog.Show();
+     ejectDialog.StartEject();
      }
-    _isOperationComplete = true;
+      }
+      _isOperationComplete = true;
      UpdateButtonStates();
             }
             catch (Exception ex)

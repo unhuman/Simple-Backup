@@ -43,14 +43,15 @@ Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
   }
             else
     {
-         _config = new BackupConfig();
-      }
+       _config = new BackupConfig();
+   }
 
    // Load values into UI - normalize paths
      BackupDirectoryTextBox.Text = NormalizePath(_config.BackupDirectory ?? string.Empty);
-           RestoreDirectoryTextBox.Text = NormalizePath(_config.RestoreDirectory ?? string.Empty);
+      RestoreDirectoryTextBox.Text = NormalizePath(_config.RestoreDirectory ?? string.Empty);
+   EjectDriveCheckBox.IsChecked = _config.ShouldEjectAfterBackup;
    }
-            catch (Exception ex)
+   catch (Exception ex)
    {
       System.Windows.MessageBox.Show($"Error loading configuration: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
          _config = new BackupConfig();
@@ -61,25 +62,26 @@ Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
      {
             try
       {
-  // Create directory if it doesn't exist
-          string? configDir = Path.GetDirectoryName(ConfigFilePath);
+ // Create directory if it doesn't exist
+string? configDir = Path.GetDirectoryName(ConfigFilePath);
       if (!string.IsNullOrEmpty(configDir) && !Directory.Exists(configDir))
            {
-           Directory.CreateDirectory(configDir);
+   Directory.CreateDirectory(configDir);
        }
 
     // Update config from UI - normalize paths
-        _config.BackupDirectory = NormalizePath(BackupDirectoryTextBox.Text);
-             _config.RestoreDirectory = NormalizePath(RestoreDirectoryTextBox.Text);
+_config.BackupDirectory = NormalizePath(BackupDirectoryTextBox.Text);
+      _config.RestoreDirectory = NormalizePath(RestoreDirectoryTextBox.Text);
+   _config.ShouldEjectAfterBackup = EjectDriveCheckBox.IsChecked ?? false;
 
        // Save to file
    string json = JsonSerializer.Serialize(_config, new JsonSerializerOptions { WriteIndented = true });
            File.WriteAllText(ConfigFilePath, json);
   }
-    catch (Exception ex)
+ catch (Exception ex)
       {
          System.Windows.MessageBox.Show($"Error saving configuration: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
+      }
         }
 
         private string NormalizePath(string path)
@@ -92,22 +94,26 @@ Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
 
         private void BackupBrowseButton_Click(object sender, RoutedEventArgs e)
         {
-    string? selectedPath = BrowseFolder("Select Backup Directory", BackupDirectoryTextBox.Text);
-     if (!string.IsNullOrEmpty(selectedPath))
+    string? selectedPath = BrowseFolder("Select Source Directory", BackupDirectoryTextBox.Text);
+  if (!string.IsNullOrEmpty(selectedPath))
   {
        BackupDirectoryTextBox.Text = selectedPath;
        SaveConfiguration();
-            }
         }
+     }
 
-        private void RestoreBrowseButton_Click(object sender, RoutedEventArgs e)
+   private void RestoreBrowseButton_Click(object sender, RoutedEventArgs e)
         {
-         string? selectedPath = BrowseFolder("Select Restore Directory", RestoreDirectoryTextBox.Text);
+         string? selectedPath = BrowseFolder("Select Destination Directory", RestoreDirectoryTextBox.Text);
       if (!string.IsNullOrEmpty(selectedPath))
  {
-         RestoreDirectoryTextBox.Text = selectedPath;
-           SaveConfiguration();
-            }
+RestoreDirectoryTextBox.Text = selectedPath;
+       SaveConfiguration();
+     
+    // Check if the selected directory is on a removable drive
+bool isRemovable = DriveUtility.IsRemovableDrive(selectedPath);
+     System.Diagnostics.Debug.WriteLine($"RestoreBrowseButton_Click: selectedPath={selectedPath}, isRemovable={isRemovable}");
+  }
     }
 
       private string? BrowseFolder(string title, string initialPath = "")
@@ -141,40 +147,47 @@ Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
 
    private void BackupButton_Click(object sender, RoutedEventArgs e)
         {
-            // Validate that both directories are set
-            if (string.IsNullOrWhiteSpace(BackupDirectoryTextBox.Text))
+        // Validate that both directories are set
+ if (string.IsNullOrWhiteSpace(BackupDirectoryTextBox.Text))
   {
- System.Windows.MessageBox.Show("Please select a Backup Directory.", "Backup", MessageBoxButton.OK, MessageBoxImage.Warning);
+ System.Windows.MessageBox.Show("Please select a Source Directory.", "Backup", MessageBoxButton.OK, MessageBoxImage.Warning);
  return;
  }
 
             if (string.IsNullOrWhiteSpace(RestoreDirectoryTextBox.Text))
 {
-     System.Windows.MessageBox.Show("Please select a Restore Directory.", "Backup", MessageBoxButton.OK, MessageBoxImage.Warning);
-      return;
-            }
+     System.Windows.MessageBox.Show("Please select a Destination Directory.", "Backup", MessageBoxButton.OK, MessageBoxImage.Warning);
+ return;
+       }
 
   // Validate directories exist
-            if (!Directory.Exists(BackupDirectoryTextBox.Text))
+ if (!Directory.Exists(BackupDirectoryTextBox.Text))
   {
-   System.Windows.MessageBox.Show("Backup Directory does not exist.", "Backup", MessageBoxButton.OK, MessageBoxImage.Error);
-              return;
-          }
+ System.Windows.MessageBox.Show("Source Directory does not exist.", "Backup", MessageBoxButton.OK, MessageBoxImage.Error);
+    return;
+       }
 
    if (!Directory.Exists(RestoreDirectoryTextBox.Text))
-       {
-          System.Windows.MessageBox.Show("Restore Directory does not exist.", "Backup", MessageBoxButton.OK, MessageBoxImage.Error);
+    {
+  System.Windows.MessageBox.Show("Destination Directory does not exist.", "Backup", MessageBoxButton.OK, MessageBoxImage.Error);
  return;
   }
 
+    // Save eject preference
+     _config.ShouldEjectAfterBackup = EjectDriveCheckBox.IsChecked ?? false;
+    SaveConfiguration();
+
+    System.Diagnostics.Debug.WriteLine($"BackupButton_Click: EjectDrive={EjectDriveCheckBox.IsChecked ?? false}");
+
     // Show backup progress dialog
      BackupProgressDialog progressDialog = new BackupProgressDialog(
-          BackupDirectoryTextBox.Text,
-          RestoreDirectoryTextBox.Text);
+BackupDirectoryTextBox.Text,
+   RestoreDirectoryTextBox.Text,
+  EjectDriveCheckBox.IsChecked ?? false);
       progressDialog.Owner = this;
-            progressDialog.Show();
+  progressDialog.Show();
          progressDialog.StartBackup();
-        }
+   }
 
         private void ExitButton_Click(object sender, RoutedEventArgs e)
         {
@@ -187,5 +200,6 @@ Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
     {
   public string? BackupDirectory { get; set; }
         public string? RestoreDirectory { get; set; }
-    }
+   public bool ShouldEjectAfterBackup { get; set; } = false;
+  }
 }
