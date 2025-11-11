@@ -1,0 +1,30 @@
+<Window x:Class="Simple_Backup.ConflictResolutionDialog"
+ xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+      mc:Ignorable="d"
+        Title="File Conflict" Height="260" Width="650"
+        Background="{DynamicResource BackgroundBrush}"
+     Foreground="{DynamicResource TextBrush}"
+   WindowStartupLocation="CenterOwner"
+    ResizeMode="NoResize"
+        ShowInTaskbar="False">
+ <Grid Margin="20">
+     <StackPanel VerticalAlignment="Stretch">
+   <TextBlock Text="File Already Exists" FontSize="16" FontWeight="Bold" 
+     Foreground="{DynamicResource TextBrush}" Margin="0,0,0,10"/>
+       <TextBlock x:Name="FileNameTextBlock" Text="filename.txt" 
+ Foreground="{DynamicResource TextBrush}" TextWrapping="Wrap" FontSize="12" Margin="0,0,0,15"/>
+  <TextBlock Text="What would you like to do?" 
+      Foreground="{DynamicResource TextBrush}" Margin="0,0,0,15"/>
+            
+  <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+   <Button x:Name="SkipButton" Content="Skip" Width="120" Height="40" Margin="0,0,10,0" Click="SkipButton_Click"/>
+    <Button x:Name="SkipAllButton" Content="Skip All" Width="120" Height="40" Margin="0,0,10,0" Click="SkipAllButton_Click"/>
+   <Button x:Name="OverwriteButton" Content="Overwrite" Width="120" Height="40" Margin="0,0,10,0" Click="OverwriteButton_Click"/>
+   <Button x:Name="OverwriteAllButton" Content="Overwrite All" Width="120" Height="40" Click="OverwriteAllButton_Click"/>
+     </StackPanel>
+      </StackPanel>
+    </Grid>
+</Window>
