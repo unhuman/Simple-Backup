@@ -138,96 +138,135 @@ Dispatcher.Invoke(() =>
         {
  try
             {
-    CopyProgressBar.Value = 0;
-   CopyStatusText.Text = "Creating directories...";
-    OverallStatusText.Text = "Status: Creating directory structure...";
+                CopyProgressBar.Value = 0;
+                CopyStatusText.Text = "Creating directories...";
+                OverallStatusText.Text = "Status: Creating directory structure...";
 
-        // First, create all directories
-              foreach (var directory in _directoriesToCreate)
-          {
-       if (_cancellationTokenSource.Token.IsCancellationRequested)
-      break;
+                // Run the entire copy operation on a background thread
+                await Task.Run(() =>
+                {
+                    try
+                    {
+                        // First, create all directories
+                        foreach (var directory in _directoriesToCreate)
+                        {
+                            if (_cancellationTokenSource.Token.IsCancellationRequested)
+                                break;
 
-  try
-       {
-           Directory.CreateDirectory(directory);
-           }
-        catch (Exception ex)
-  {
-         System.Diagnostics.Debug.WriteLine($"Error creating directory {directory}: {ex.Message}");
-          }
-   }
+                            try
+                            {
+                                Directory.CreateDirectory(directory);
+                            }
+                            catch (Exception ex)
+                            {
+                                System.Diagnostics.Debug.WriteLine($"Error creating directory {directory}: {ex.Message}");
+                            }
+                        }
 
- CopyStatusText.Text = "Copying files...";
-     OverallStatusText.Text = "Status: Copying files...";
+                        Dispatcher.Invoke(() =>
+                        {
+                            CopyStatusText.Text = "Copying files...";
+                            OverallStatusText.Text = "Status: Copying files...";
+                        });
 
-     int filesCopied = 0;
-            _copiedBytes = 0;
+                        int filesCopied = 0;
+                        _copiedBytes = 0;
 
-       foreach (var file in _filesToCopy)
- {
-      if (_cancellationTokenSource.Token.IsCancellationRequested)
-         {
-             _wasCancelledMidOperation = true;
-        break;
-}
+                        foreach (var file in _filesToCopy)
+                        {
+                            if (_cancellationTokenSource.Token.IsCancellationRequested)
+                            {
+                                _wasCancelledMidOperation = true;
+                                break;
+                            }
 
-       try
-     {
-              string relativePath = file.FullName.Substring(_sourceDirectory.Length).TrimStart(Path.DirectorySeparatorChar);
-        string destinationPath = Path.Combine(_destinationDirectory, relativePath);
-       string destinationDir = Path.GetDirectoryName(destinationPath);
+                            try
+                            {
+                                string relativePath = file.FullName.Substring(_sourceDirectory.Length).TrimStart(Path.DirectorySeparatorChar);
+                                string destinationPath = Path.Combine(_destinationDirectory, relativePath);
+                                string destinationDir = Path.GetDirectoryName(destinationPath);
 
-                 if (!Directory.Exists(destinationDir))
-          {
-           Directory.CreateDirectory(destinationDir);
-      }
+                                if (!Directory.Exists(destinationDir))
+                                {
+                                    Directory.CreateDirectory(destinationDir);
+                                }
 
-     // Check if file already exists and handle conflict
-         if (File.Exists(destinationPath))
-     {
-       System.Diagnostics.Debug.WriteLine($"Conflict detected for: {destinationPath}");
-           CopyStatusText.Text = $"Conflict: {file.Name} - showing dialog...";
-        
- ConflictResolutionDialog.ConflictResolution resolution = await HandleFileConflictAsync(destinationPath);
-     System.Diagnostics.Debug.WriteLine($"Conflict resolution: {resolution}");
+                                // Check if file already exists and handle conflict
+                                if (File.Exists(destinationPath))
+                                {
+                                    System.Diagnostics.Debug.WriteLine($"Conflict detected for: {destinationPath}");
+                                    
+                                    ConflictResolutionDialog.ConflictResolution resolution = ConflictResolutionDialog.ConflictResolution.Skip;
+                                    
+                                    // Use Dispatcher to show dialog on UI thread and wait for result
+                                    Dispatcher.Invoke(() =>
+                                    {
+                                        CopyStatusText.Text = $"Conflict: {file.Name} - showing dialog...";
+                                    });
 
-         if (resolution == ConflictResolutionDialog.ConflictResolution.Skip)
-       {
-     // Skip this file, don't copy it
-     System.Diagnostics.Debug.WriteLine($"Skipping file: {destinationPath}");
-              continue;
-      }
-      // If Overwrite or OverwriteAll, proceed to copy
-         }
+                                    // Show dialog and get resolution
+                                    Dispatcher.Invoke(async () =>
+                                    {
+                                        resolution = await HandleFileConflictAsync(destinationPath);
+                                    });
 
- System.Diagnostics.Debug.WriteLine($"Copying file: {file.FullName} -> {destinationPath}");
-            File.Copy(file.FullName, destinationPath, true);
-      _copiedBytes += file.Length;
-  filesCopied++;
+                                    System.Diagnostics.Debug.WriteLine($"Conflict resolution: {resolution}");
 
-      double progressPercent = _totalBytes > 0 ? (_copiedBytes / (double)_totalBytes) * 100 : 0;
+                                    if (resolution == ConflictResolutionDialog.ConflictResolution.Skip)
+                                    {
+                                        System.Diagnostics.Debug.WriteLine($"Skipping file: {destinationPath}");
+                                        continue;
+                                    }
+                                }
 
-     CopyProgressBar.Value = Math.Min(progressPercent, 100);
- CopyStatusText.Text = $"Copying: {file.Name}";
-         CopyCountText.Text = $"Files copied: {filesCopied} / {_filesToCopy.Count} ({FormatBytes(_copiedBytes)}/{FormatBytes(_totalBytes)})";
-       }
-          catch (Exception ex)
-      {
-            System.Diagnostics.Debug.WriteLine($"Exception in copy loop: {ex}");
- CopyStatusText.Text = $"Error copying {file.Name}: {ex.Message}";
-           }
-     }
+                                System.Diagnostics.Debug.WriteLine($"Copying file: {file.FullName} -> {destinationPath}");
+                                File.Copy(file.FullName, destinationPath, true);
+                                _copiedBytes += file.Length;
+                                filesCopied++;
 
-    CopyProgressBar.Value = 100;
-     CopyStatusText.Text = "Copy phase complete!";
- System.Diagnostics.Debug.WriteLine("Copy phase complete");
-     }
+                                double progressPercent = _totalBytes > 0 ? (_copiedBytes / (double)_totalBytes) * 100 : 0;
+
+                                // Update UI on UI thread
+                                Dispatcher.Invoke(() =>
+                                {
+                                    CopyProgressBar.Value = Math.Min(progressPercent, 100);
+                                    CopyStatusText.Text = $"Copying: {file.Name}";
+                                    CopyCountText.Text = $"Files copied: {filesCopied} / {_filesToCopy.Count} ({FormatBytes(_copiedBytes)}/{FormatBytes(_totalBytes)})";
+                                });
+                            }
+                            catch (Exception ex)
+                            {
+                                System.Diagnostics.Debug.WriteLine($"Exception in copy loop: {ex}");
+                                Dispatcher.Invoke(() =>
+                                {
+                                    CopyStatusText.Text = $"Error copying {file.Name}: {ex.Message}";
+                                });
+                            }
+                        }
+
+                        Dispatcher.Invoke(() =>
+                        {
+                            CopyProgressBar.Value = 100;
+                            CopyStatusText.Text = "Copy phase complete!";
+                            System.Diagnostics.Debug.WriteLine("Copy phase complete");
+                        });
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Exception in CopyPhaseOnUIThread: {ex}");
+                        Dispatcher.Invoke(() =>
+                        {
+                            CopyStatusText.Text = $"Error: {ex.Message}";
+                        });
+                        throw;
+                    }
+                }, _cancellationTokenSource.Token);
+            }
             catch (Exception ex)
-  {
-           System.Diagnostics.Debug.WriteLine($"Exception in CopyPhaseOnUIThread: {ex}");
-      CopyStatusText.Text = $"Error: {ex.Message}";
-         throw;
+            {
+                System.Diagnostics.Debug.WriteLine($"Exception in CopyPhaseOnUIThread: {ex}");
+                CopyStatusText.Text = $"Error: {ex.Message}";
+                throw;
             }
         }
 
