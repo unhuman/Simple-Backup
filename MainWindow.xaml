@@ -6,6 +6,7 @@
     xmlns:local="clr-namespace:Simple_Backup"
       mc:Ignorable="d"
         Title="Simple Backup" Height="420" Width="700"
+    Icon="pack://application:,,,/backup-icon.ico"
     Background="{DynamicResource BackgroundBrush}"
         Foreground="{DynamicResource TextBrush}">
     <Grid Margin="20">

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <!-- Background circle -->
+  <circle cx="128" cy="128" r="120" fill="#0078D4" opacity="0.1"/>
+  
+  <!-- Outer circle border -->
+  <circle cx="128" cy="128" r="120" fill="none" stroke="#0078D4" stroke-width="2"/>
+  
+  <!-- Backup arrow (curved upward) -->
+  <path d="M 80 140 Q 128 80 176 140" fill="none" stroke="#0078D4" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  
+  <!-- Arrow head -->
+  <polygon points="176,140 165,125 175,135" fill="#0078D4"/>
+  
+  <!-- Disk/Storage symbol (lines representing data) -->
+  <rect x="70" y="160" width="116" height="60" rx="8" fill="none" stroke="#0078D4" stroke-width="4"/>
+  
+  <!-- Data lines inside -->
+  <line x1="80" y1="175" x2="176" y2="175" stroke="#0078D4" stroke-width="3" stroke-linecap="round"/>
+  <line x1="80" y1="195" x2="176" y2="195" stroke="#0078D4" stroke-width="3" stroke-linecap="round"/>
+  <line x1="80" y1="215" x2="176" y2="215" stroke="#0078D4" stroke-width="3" stroke-linecap="round"/>
+  
+  <!-- Checkmark inside for "complete/reliable" -->
+  <polyline points="100,190 110,200 135,175" fill="none" stroke="#107C10" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

@@ -28,8 +28,20 @@ Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
 
    public MainWindow()
         {
-      InitializeComponent();
-      LoadConfiguration();
+            try
+            {
+                InitializeComponent();
+                LoadConfiguration();
+            }
+            catch (Exception ex)
+            {
+                System.Windows.MessageBox.Show(
+                    $"Error initializing MainWindow: {ex.GetType().Name}\n\nMessage: {ex.Message}\n\nStackTrace: {ex.StackTrace}",
+                    "Initialization Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+                throw;
+            }
         }
 
      private void LoadConfiguration()
