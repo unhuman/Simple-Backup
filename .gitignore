@@ -1,4 +1,6 @@
 .vs/
 bin/
+installer/
 obj/
 *.user
+build.log
